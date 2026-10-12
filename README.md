@@ -66,7 +66,7 @@ Prefer a guided path? See the [five-minute walkthrough](#five-minute-walkthrough
 </tbody>
 </table>
 
-These are HIPAA-style safeguards shown on synthetic data. A real deployment also needs a signed BAA with every vendor that touches PHI, a risk analysis, policies and training. Software alone is never "HIPAA compliant".
+These are HIPAA-style safeguards shown on synthetic data. In this demo the emailed code lands in a Demo mailbox that the signing-in browser can read, so it shows the flow rather than proving access to a real inbox; with a real email service it is a true second step. A real deployment also needs a signed BAA with every vendor that touches PHI, a risk analysis, policies and training. Software alone is never "HIPAA compliant".
 
 - Each demo login gets a private copy of the workplace in its own database file, deleted after 24 hours.
 - Second steps: authenticator app (RFC 6238), emailed code (to a labelled Demo mailbox in this demo), recovery codes, passkeys (WebAuthn).
