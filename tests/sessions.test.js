@@ -142,3 +142,20 @@ test('a refused request from a private session is audited in that workplace, not
   assert.equal(denied(app.pool.get(w.workplaceId).db), 1);
   assert.equal(denied(app.db), 0);
 });
+
+test('a private admin cannot run the labs; the shared results stay as they were and stay readable', async (t) => {
+  const app = await startTestApp(); t.after(app.close);
+  const w = createPrivateWorkplace({ directory: app.directory, pool: app.pool, dir: app.config.workplacesDir, clock: app.clock, cap: 200, role: 'admin', username: 'ada' });
+  const ada = sessionFor({ ...app, db: app.pool.get(w.workplaceId).db, username: 'ada', workplaceId: w.workplaceId });
+  app.directory.prepare("INSERT INTO lab_results (lab, at, results_json) VALUES ('attacks', 't', '{\"attacks\":3}'), ('models', 't', '{\"models\":2}')").run();
+  const rows = () => JSON.stringify(app.directory.prepare('SELECT lab, at, results_json FROM lab_results ORDER BY lab').all());
+  const before = rows();
+  for (const lab of ['attacks', 'models']) {
+    const r = await ada.call(`/api/labs/${lab}/run`, { method: 'POST' });
+    assert.equal(r.status, 403);
+    assert.equal(r.body.error.code, 'forbidden');
+    assert.equal(r.body.error.message, 'The labs run in the shared demo workplace (Quick look as Dana).');
+    assert.equal((await ada.call(`/api/labs/${lab}`)).status, 200);
+  }
+  assert.equal(rows(), before);
+});
