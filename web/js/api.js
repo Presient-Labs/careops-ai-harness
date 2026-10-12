@@ -1,13 +1,10 @@
 let csrfToken = null;
 
-// Identity stays in the server session. Only its CSRF token is kept in memory.
 export async function api(path, { method = 'GET', body } = {}) {
   const verb = method.toUpperCase();
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (verb === 'POST' && path !== '/auth/login' && csrfToken) {
-    headers['X-CSRF-Token'] = csrfToken;
-  }
+  if (verb === 'POST' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
   try {
     const response = await fetch(`/api${path}`, {
       method: verb, headers, credentials: 'same-origin', cache: 'no-store',
@@ -16,8 +13,8 @@ export async function api(path, { method = 'GET', body } = {}) {
     const data = response.status === 204 ? {} : await response.json().catch(() => null);
     if (response.status === 401) {
       csrfToken = null;
-      // Keep the login form's error visible instead of reloading the same page.
-      if (location.pathname !== '/' && location.pathname !== '/index.html') location.replace('/');
+      // Signed out (idle, expired, or the halfway pass ran out): back to sign-in, saying why.
+      if (location.pathname !== '/' && location.pathname !== '/index.html') location.replace(`/?reason=${encodeURIComponent(data?.error?.code ?? 'unauthenticated')}`);
     }
     if (!response.ok) {
       return { error: data?.error ?? { code: 'request_failed', message: 'The request could not be completed. Please try again.' } };
@@ -25,8 +22,9 @@ export async function api(path, { method = 'GET', body } = {}) {
     if (data === null) {
       return { error: { code: 'invalid_response', message: 'The server returned an unreadable response. Refresh this page to check the latest data.' } };
     }
-    if (path === '/auth/login' || path === '/auth/me') csrfToken = data.csrfToken;
+    if (typeof data.csrfToken === 'string') csrfToken = data.csrfToken; // every sign-in step issues a new session and token
     if (path === '/auth/logout') csrfToken = null;
+    window.dispatchEvent(new CustomEvent('careops:activity'));
     return data;
   } catch {
     return { error: { code: 'network_error', message: verb === 'POST'

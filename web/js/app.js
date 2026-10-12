@@ -10,6 +10,10 @@ import { audit } from './views/audit.js';
 import { attackLab, modelLab } from './views/labs.js';
 import { howItWorks } from './views/how-it-works.js';
 import { demoControls } from './views/demo-controls.js';
+import { setup } from './views/setup.js';
+import { verify } from './views/verify.js';
+import { mailbox } from './views/mailbox.js';
+import { startSessionTimer } from './views/session.js';
 
 const routes = [
   { id: 'assistant', name: 'Assistant', icon: '✦', roles: ['employee', 'manager', 'billing', 'admin'] },
@@ -35,6 +39,8 @@ async function workspace() {
   document.querySelector('#user-name').textContent = user.displayName;
   document.querySelector('#user-role').textContent = roles[user.role];
   document.querySelector('#identity').hidden = false;
+  if (result.session?.accountSession) document.querySelector('#account-security').hidden = false;
+  if (result.session) startSessionTimer(result.session);
   const allowed = routes.filter(route => route.roles.includes(user.role));
   const navigation = document.querySelector('#navigation');
   navigation.replaceChildren(...allowed.map(route => el('a', { href: `#${route.id}`, class: 'nav-link' }, el('span', { class: 'nav-icon', 'aria-hidden': 'true' }, route.icon), route.name)));
@@ -77,5 +83,5 @@ async function workspace() {
   route();
 }
 
-if (document.body.dataset.page === 'login') login();
-else workspace();
+const pages = { login, setup, verify, mailbox };
+(pages[document.body.dataset.page] ?? workspace)();

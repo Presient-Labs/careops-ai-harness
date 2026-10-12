@@ -13,7 +13,7 @@
   <a class="skip-link" href="#main">Skip to main content</a>
   <header class="site-header">
     <a class="wordmark" href="/app.html">Care<span>Ops</span></a>
-    <div class="identity" id="identity" hidden><span id="user-name"></span><span class="pill role-badge" id="user-role"></span><button class="button quiet" id="logout" type="button">Logout</button></div>
+    <div class="identity" id="identity" hidden><span id="user-name"></span><span class="pill role-badge" id="user-role"></span><span id="session-left" class="small muted"></span><a id="account-security" class="button quiet" href="/setup.html" hidden>Sign-in settings</a><button class="button quiet" id="logout" type="button">Logout</button></div>
   </header>
   <div class="workspace">
     <aside class="sidebar"><p class="eyebrow">YOUR WORKSPACE</p><nav id="navigation" aria-label="Main navigation"></nav><p class="sidebar-note">The model reasons.<br>The harness checks.<br>You stay in control.</p></aside>
@@ -23,6 +23,11 @@
   <dialog id="trace-drawer" class="trace-drawer" aria-labelledby="trace-title">
     <div class="drawer-header"><div><p class="eyebrow">THE DECISION RECORD</p><h2 id="trace-title">Why did this happen?</h2></div><button id="close-trace" class="button quiet" type="button" aria-label="Close decision record">Close</button></div>
     <div id="trace-content"></div>
+  </dialog>
+  <dialog id="idle-dialog" class="idle-dialog" aria-labelledby="idle-title">
+    <h2 id="idle-title">Still there?</h2>
+    <p>For safety, you'll be signed out in <strong id="idle-left"></strong> without activity.</p>
+    <button id="stay-signed-in" class="button" type="button">Stay signed in</button>
   </dialog>
   <noscript><p class="notice">Enable JavaScript to use CareOps.</p></noscript>
 </body>

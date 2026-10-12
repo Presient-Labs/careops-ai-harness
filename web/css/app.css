@@ -313,3 +313,21 @@ progress::-moz-progress-bar { border-radius: 8px; background: var(--accent); }
 /* Server-rendered record values beside an AI answer */
 .records { margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #f6fafb; }
 .records ul { margin: 4px 0 0; padding-left: 18px; font-weight: 600; overflow-wrap: anywhere; }
+/* Sign-in redesign: three panels, setup and verify cards, recovery codes, the Demo mailbox, the idle warning. */
+.signin-layout { max-width: 1180px; margin: 0 auto; padding: 32px 16px 56px; display: grid; gap: 24px; }
+.signin-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
+.passkey-button { margin-top: 12px; width: 100%; }
+.hipaa-panel table { width: 100%; border-collapse: collapse; }
+.hipaa-panel th, .hipaa-panel td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line, #d9dee3); vertical-align: top; }
+.table-scroll { overflow-x: auto; }
+.setup-layout { max-width: 1000px; margin: 0 auto; padding: 32px 16px 56px; display: grid; gap: 20px; }
+.method-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
+.method-card.is-done { opacity: .75; }
+.method-card img { display: block; max-width: 200px; height: auto; background: #fff; }
+.recovery-list { columns: 2; padding-left: 20px; font-size: 1.05rem; }
+.recovery-list code { letter-spacing: .04em; }
+.mailbox-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.mailbox-list .mail h2 { font-size: 1.05rem; margin: 4px 0; }
+.idle-dialog { max-width: 420px; border: 0; border-radius: 12px; padding: 24px; }
+.idle-dialog::backdrop { background: rgb(0 0 0 / .45); }
+@media (max-width: 560px) { .recovery-list { columns: 1; } }

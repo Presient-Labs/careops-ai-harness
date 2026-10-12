@@ -11,18 +11,38 @@
 <body data-page="login">
   <div class="demo-banner">SYNTHETIC DEMO DATA — no real patients, employees, or PHI.</div>
   <header class="site-header"><a class="wordmark" href="/">Care<span>Ops</span></a><span class="header-note">A guided operations workspace</span></header>
-  <main class="login-layout" id="main">
+  <main class="signin-layout" id="main">
     <section class="login-intro" aria-labelledby="welcome-title">
       <p class="eyebrow">CARE, WITH CLEAR BOUNDARIES</p>
       <h1 id="welcome-title">Everyday work.<br>Accountable AI.</h1>
-      <p class="lead">Find a policy, request time off, or move a claim forward. See the sources and checks behind every assistant answer.</p>
-      <ol class="intro-steps"><li><strong>Ask in plain English.</strong><span>The assistant works with your role and records.</span></li><li><strong>Review the next step.</strong><span>You confirm an action before it happens.</span></li><li><strong>See why it happened.</strong><span>Follow each decision from sign-in to audit.</span></li></ol>
-      <p class="muted">Four demo accounts. One shared, entirely fictional workplace.</p>
+      <p class="lead">Create your own demo login to try real sign-in: a second step, lockout after failed tries, and automatic logoff. Or take a quick look as one of four demo people.</p>
+      <p id="signin-reason" class="notice" role="status" hidden></p>
     </section>
-    <div class="login-cards">
+    <div class="signin-grid">
+      <section class="card" aria-labelledby="signin-title">
+        <h2 id="signin-title">Sign in</h2>
+        <form id="signin-form" class="stack">
+          <div><label for="signin-username">Username</label><input id="signin-username" name="username" autocomplete="username" required></div>
+          <div><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" required></div>
+          <p id="signin-error" class="notice error" role="alert" hidden></p>
+          <button class="button" type="submit">Sign in</button>
+        </form>
+        <button id="passkey-signin" class="button secondary passkey-button" type="button">Sign in with a passkey</button>
+      </section>
+      <section class="card" aria-labelledby="create-title">
+        <h2 id="create-title">Create a demo login</h2>
+        <p class="small muted">You get a private copy of the fictional workplace for 24 hours. Don't use your real name or a password you use elsewhere.</p>
+        <form id="create-form" class="stack">
+          <div><label for="create-username">Username</label><input id="create-username" name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" required><span class="small muted">3 to 32 letters, numbers or underscores.</span></div>
+          <div><label for="create-password">Password</label><input id="create-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="200" required><span class="small muted">At least 12 characters.</span></div>
+          <div><label for="create-role">Role</label><select id="create-role" name="role"><option value="employee">Employee</option><option value="manager">Manager</option><option value="billing">Billing Specialist</option><option value="admin">Compliance Admin</option></select></div>
+          <p id="create-error" class="notice error" role="alert" hidden></p>
+          <button class="button" type="submit">Create login</button>
+        </form>
+      </section>
       <section class="card persona-card" aria-labelledby="persona-title">
-        <p class="eyebrow">TRY THE DEMO</p>
-        <h2 id="persona-title">Enter as a demo persona</h2>
+        <p class="eyebrow">QUICK LOOK — SKIPS SIGN-IN</p>
+        <h2 id="persona-title">The shared demo workplace</h2>
         <div class="account-list">
           <button class="account-row persona-row" type="button" data-persona="jordan"><span><strong>Enter as Jordan</strong><span class="pill">Employee</span></span><span>Benefits • PTO • Employee policies</span></button>
           <button class="account-row persona-row" type="button" data-persona="priya"><span><strong>Enter as Priya</strong><span class="pill">Manager</span></span><span>Team PTO • Staffing • Approvals</span></button>
@@ -30,18 +50,23 @@
           <button class="account-row persona-row" type="button" data-persona="dana"><span><strong>Enter as Dana</strong><span class="pill">Compliance Admin</span></span><span>Audit • Security events • Policy outcomes</span></button>
         </div>
         <p id="persona-error" class="notice error" role="alert" hidden></p>
-        <p class="small muted">Demo identities contain synthetic data only. Persona shortcuts exist for demonstration; identity and authorization are still enforced by the backend.</p>
-      </section>
-      <section class="card" aria-labelledby="login-title">
-        <h2 id="login-title">Or sign in with a username</h2>
-        <form id="login-form" class="stack">
-          <div><label for="username">Username</label><input id="username" name="username" autocomplete="username" required></div>
-          <div><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
-          <p id="login-error" class="notice error" role="alert" hidden></p>
-          <button class="button secondary" type="submit">Sign in</button>
-        </form>
+        <p class="small muted">Quick look skips sign-in and shares one workplace with every visitor. Identity and permissions are still enforced by the server.</p>
       </section>
     </div>
+    <section class="card hipaa-panel" aria-labelledby="hipaa-title">
+      <h2 id="hipaa-title">HIPAA-style safeguards in this demo</h2>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Safeguard (45 CFR 164.312)</th><th>In this demo</th></tr></thead>
+        <tbody>
+          <tr><td>Unique user identification</td><td>Every visitor has their own login.</td></tr>
+          <tr><td>Automatic logoff</td><td>Signed out after 15 idle minutes, with a warning first.</td></tr>
+          <tr><td>Person or entity authentication</td><td>A required second step: authenticator app, emailed code or passkey.</td></tr>
+          <tr><td>Audit controls</td><td>Sign-ins, failures, lockouts and logoffs are recorded.</td></tr>
+          <tr><td>Access control</td><td>Role permissions, and a private workplace per login.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted">These are HIPAA-style safeguards shown on synthetic data. A real deployment also needs a signed BAA with every vendor that touches PHI, a risk analysis, policies and training. Software alone is never "HIPAA compliant".</p>
+    </section>
   </main>
   <noscript><p class="notice">Enable JavaScript to sign in and use CareOps.</p></noscript>
 </body>
