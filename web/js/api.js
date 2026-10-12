@@ -1,4 +1,5 @@
 let csrfToken = null;
+const SESSION_ENDED = new Set(['unauthenticated', 'session_idle', 'signin_timed_out', 'second_step_required']);
 
 // background: true is for polls. The server does not count them as activity, and neither does the page's idle timer.
 export async function api(path, { method = 'GET', body, background = false } = {}) {
@@ -13,9 +14,11 @@ export async function api(path, { method = 'GET', body, background = false } = {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const data = response.status === 204 ? {} : await response.json().catch(() => null);
-    if (response.status === 401) {
+    // Only a lost session sends the visitor back to sign in, saying why (idle, expired, or the halfway pass ran out).
+    // Any other 401 (a wrong code, a cancelled or unknown passkey) is an answer for the page to show, and the
+    // half-finished sign-in keeps its CSRF token for the next try.
+    if (response.status === 401 && SESSION_ENDED.has(data?.error?.code ?? 'unauthenticated')) {
       csrfToken = null;
-      // Signed out (idle, expired, or the halfway pass ran out): back to sign-in, saying why.
       if (location.pathname !== '/' && location.pathname !== '/index.html') location.replace(`/?reason=${encodeURIComponent(data?.error?.code ?? 'unauthenticated')}`);
     }
     if (!response.ok) {
