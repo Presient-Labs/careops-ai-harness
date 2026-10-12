@@ -2,7 +2,10 @@
 
 **SYNTHETIC DEMO DATA — no real patients, employees, or PHI.** Every person and record below is fictional.
 
-Open [the live demo](https://careops.shawndemos.com) or your local CareOps server. All five accounts use **`careops-demo`** by default. The login page offers **Enter as …** persona buttons for the four primary roles (they create a normal server session; no role is sent from the browser); type `sam` into the username form to use the second employee account.
+Open [the live demo](https://careops.shawndemos.com) or your local CareOps server. There are two ways in:
+
+- **Quick look** opens the shared workplace as Jordan, Priya, Marcus or Dana, and skips sign-in. The server picks the account and creates a normal session; no role is sent from the browser. Sam has no button.
+- **Create a demo login** gives you a private workplace for 24 hours, with real sign-in: your own username and password, then a second step (authenticator app, emailed code, recovery code or passkey). The emailed code arrives in a labelled Demo mailbox inside the app. The people below exist inside every workplace, and their usernames are reserved so a visitor cannot take one.
 
 | Username | Display name | Role | Access |
 | --- | --- | --- | --- |
@@ -29,10 +32,10 @@ Marcus can investigate `CLM-1004`, seeded as denied with code `CO-197` for missi
 
 ## Switching accounts and resetting
 
-Use **Logout**, then sign in with the next username. Separate browser profiles or private windows can hold different sessions at once; tabs in the same browser profile share the session cookie.
+Use **Logout**, then choose another Quick look button or sign in with your demo login. Separate browser profiles or private windows can hold different sessions at once; tabs in the same browser profile share the session cookie. Five failed sign-ins lock a demo login for 15 minutes, and a session ends after 15 idle minutes or 8 hours.
 
 Dana can open **Demo Controls → Reset demo data** and accept the confirmation dialog. Reset affects every viewer: it restores seeded business records, removes created tasks and pending action proposals, and resets idempotency results. Sessions remain signed in. Audit events, traces, provider usage, and lab results remain; KB documents are not reloaded.
 
-`DEMO_PASSWORD` can change the seeded password in a local deployment. Changing the environment alone does not rewrite existing accounts: startup seeds only when no users exist, while an admin reset reapplies the configured password to seeded users. These are public demo credentials and must not be reused for a production system.
+`DEMO_PASSWORD` sets the password stored for the seeded people in the shared workplace. Nobody signs in with it: Quick look skips sign-in, and private workplaces get a random password nobody sees. Changing the environment alone does not rewrite existing accounts: startup seeds only when no users exist, while an admin reset of the shared workplace reapplies the configured password. These are public demo credentials and must not be reused for a production system.
 
 Follow the six-step walkthrough in [README.md](README.md). For measured results, see the Attack Lab / Model Lab pages as Dana. See [SECURITY.md](SECURITY.md) for what the account boundaries do and do not protect.

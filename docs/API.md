@@ -45,9 +45,50 @@ AuditEvent  = { id: number, at: string, actorName: string|null, actorRole: strin
 
 | Method & path | Body | Response |
 |---|---|---|
-| `POST /api/auth/login` | `{username, password}` | `200 {user: User, csrfToken}` + cookie · `401 unauthenticated` |
+| `POST /api/auth/login` | `{username, password}` | `200 {stage: 'halfway', csrfToken, username, role, methods}` — password only; finish with a second step (see [Accounts and sign-in](#accounts-and-sign-in)) |
 | `POST /api/auth/logout` | – | `204` |
-| `GET /api/auth/me` | – | `200 {user: User, csrfToken}` · `401` |
+| `GET /api/auth/me` | – | `200 {user: User, csrfToken, session: {idleTimeoutMs, expiresAt, accountSession}}` · `401` |
+| `POST /api/auth/ping` | – | `204` — "Stay signed in"; counts as activity for the idle timer · `401` |
+| `POST /api/auth/demo` | `{persona: 'jordan'\|'priya'\|'marcus'\|'dana'}` | `200 {user: User, csrfToken}` + cookie — **Quick look**: a full session in the shared workplace, no sign-in |
+
+## Accounts and sign-in
+
+A demo login is an account with a private workplace (its own database file, deleted 24 hours after creation). Sign-in has two stages:
+
+1. **Halfway session** — after the password only. It lasts 5 minutes and can do nothing except finish sign-in (`GET /second-step`, `POST /verify`, `/email/send`, `GET /mailbox`, `POST /logout`) and, **only when the account has no second step yet**, set one up. A halfway session for an account that already has a second step gets `403` from every setup endpoint.
+2. **Full session** — after a second step. It ends after 15 idle minutes or 8 hours, whichever comes first.
+
+All endpoints are under `/api/auth` and JSON. "Setup" means a full session, or a halfway session whose account has no second step yet. Calls without a session (`/accounts`, `/login`, `/passkeys/login/*`) need no CSRF token; every other POST needs `X-CSRF-Token`. When setup completes an account's first second step during a halfway session, the session is replaced with a full one and the response carries the new `csrfToken`.
+
+| Endpoint | Session | Body | Returns |
+|---|---|---|---|
+| `POST /accounts` | none | `{ username, password, role }` | `201 { stage: 'halfway', csrfToken, username, role, methods: [] }` |
+| `POST /login` | none | `{ username, password }` | `{ stage: 'halfway', csrfToken, username, role, methods }` |
+| `GET /second-step` | halfway or full | — | `{ stage, username, role, methods, canSetup, csrfToken }` |
+| `POST /verify` | halfway | `{ method: 'totp'\|'email'\|'recovery', code }` | `{ stage: 'full', csrfToken, ... }` |
+| `POST /email/send` | halfway or full | `{ purpose: 'signin'\|'enable' }` | `204` |
+| `POST /email/confirm` | setup | `{ code }` | `{ stage, csrfToken?, methods }` |
+| `POST /totp/setup` | setup | — | `{ secret, otpauthUrl, qr }` |
+| `POST /totp/confirm` | setup | `{ code }` | `{ stage, csrfToken?, methods, recoveryCodes }` |
+| `POST /passkeys/register/options` | setup | — | `{ options, challengeId }` |
+| `POST /passkeys/register/verify` | setup | `{ challengeId, response }` | `{ stage, csrfToken?, methods }` |
+| `POST /passkeys/login/options` | none | — | `{ options, challengeId }` |
+| `POST /passkeys/login/verify` | none | `{ challengeId, response }` | `{ stage: 'full', csrfToken, ... }` |
+| `GET /mailbox` | halfway or full | — | `{ messages }` — the labelled Demo mailbox |
+
+Limits: usernames are 3–32 characters from `[A-Za-z0-9_]` and matched case-insensitively; passwords are 12–200 characters and not on the bundled common-password list; 5 failed attempts lock an account for 15 minutes; 20 sign-in attempts per address per minute; 3 demo logins per address per hour (IPv6 counted per /64); at most 200 live private workplaces; authenticator and emailed codes are single use.
+
+Error codes added by sign-in (same error body as above):
+
+- `account_locked` (423)
+- `second_step_required` (401)
+- `session_idle` (401)
+- `invalid_credentials` (401)
+- `invalid_code` (422)
+- `username_taken` (409)
+- `creation_limited` (429)
+- `demo_full` (503)
+- `workplace_failed` (503)
 
 ## Assistant (all roles)
 

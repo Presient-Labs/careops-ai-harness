@@ -53,6 +53,26 @@ Prefer a guided path? See the [five-minute walkthrough](#five-minute-walkthrough
 - **Resilient.** If the AI provider fails, times out or the budget runs out, nothing changes and the rest of the app keeps working. `/ready` reports the degraded state.
 - **Auditable.** Each turn stores an 8-step trace and a plain-English decision summary with audit event IDs (`EVT-000123`); later confirmations or cancellations are appended, not overwritten. Refused API requests (wrong role, missing CSRF token, someone else's record) are recorded as security events too.
 
+## Real sign-in and HIPAA-style safeguards
+
+<table>
+<thead><tr><th>Safeguard (45 CFR 164.312)</th><th>In this demo</th></tr></thead>
+<tbody>
+<tr><td>Unique user identification</td><td>Every visitor has their own login.</td></tr>
+<tr><td>Automatic logoff</td><td>Signed out after 15 idle minutes, with a warning first.</td></tr>
+<tr><td>Person or entity authentication</td><td>A required second step: authenticator app, emailed code or passkey.</td></tr>
+<tr><td>Audit controls</td><td>Sign-ins, failures, lockouts and logoffs are recorded.</td></tr>
+<tr><td>Access control</td><td>Role permissions, and a private workplace per login.</td></tr>
+</tbody>
+</table>
+
+These are HIPAA-style safeguards shown on synthetic data. A real deployment also needs a signed BAA with every vendor that touches PHI, a risk analysis, policies and training. Software alone is never "HIPAA compliant".
+
+- Each demo login gets a private copy of the workplace in its own database file, deleted after 24 hours.
+- Second steps: authenticator app (RFC 6238), emailed code (to a labelled Demo mailbox in this demo), recovery codes, passkeys (WebAuthn).
+- 5 failures lock an account for 15 minutes; 15 idle minutes sign you out; every session ends after 8 hours.
+- An isolation test calls every API route from one workplace against another's records.
+
 ## How it works
 
 ```mermaid
@@ -208,6 +228,10 @@ Beyond answer quality: a larger and regularly refreshed attack corpus, load and 
 - Citation checks verify that sources were supplied, not that every sentence is supported. Answer checks are deterministic rules, not semantic understanding. Numbers are bound by unit and concept, dates by full date, statuses, codes and payers by record, thresholds by claim, procedures by the channels the documents name — and each rule was calibrated against 1,110 stored real answers (15 genuinely wrong answers withheld, no correct ones). A wording no rule anticipates can still pass or be withheld; the server-written records line beside each answer is the backstop. General advice that names no number, date, status or channel is constrained by the prompt and the Model Lab, not proven.
 - The defensible claim is: *the model cannot expand its permissions or execute arbitrary tools; deterministic server code scopes context and controls confirmed business writes.* The labs do not prove universal safety.
 - The budget check uses recorded costs, not reservations for in-flight requests; set a provider-side spending limit too.
+
+## Credits
+
+Common-password list: SecLists 10k-most-common (MIT).
 
 ## License
 
