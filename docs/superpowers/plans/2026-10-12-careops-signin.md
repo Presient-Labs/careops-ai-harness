@@ -2466,17 +2466,18 @@ function listRoutes(app) {
   return [...out];
 }
 
-// Requests made as workplace A against identifiers that exist only in workplace B (the "markerb" records).
+// Requests made as workplace A against identifiers that exist only in workplace B. The ids never contain the marker
+// word (A's own audit log echoes the URLs A requested); only B's record contents do.
 const PROBES = {
   'POST /api/chat': { body: { message: 'What is my PTO balance?' } },
-  'POST /api/actions/:id/confirm': { params: { id: 'act_markerb' } },
-  'POST /api/actions/:id/dismiss': { params: { id: 'act_markerb' } },
-  'GET /api/traces/:turnId': { params: { turnId: 'turn_markerb' } },
+  'POST /api/actions/:id/confirm': { params: { id: 'act_bonly' } },
+  'POST /api/actions/:id/dismiss': { params: { id: 'act_bonly' } },
+  'GET /api/traces/:turnId': { params: { turnId: 'turn_bonly' } },
   'GET /api/models': {},
   'GET /api/pto/me': {},
   'POST /api/pto/requests': { body: { date: '2026-10-20', hours: 8, idempotencyKey: 'iso-pto' } },
   'GET /api/pto/approvals': {},
-  'POST /api/pto/requests/:id/decision': { params: { id: 'pto_markerb' }, body: { decision: 'APPROVED', idempotencyKey: 'iso-decide' } },
+  'POST /api/pto/requests/:id/decision': { params: { id: 'pto_bonly' }, body: { decision: 'APPROVED', idempotencyKey: 'iso-decide' } },
   'GET /api/claims': {},
   'GET /api/claims/:id': { params: { id: 'CLM-1001' } },
   'POST /api/claims/:id/followups': { params: { id: 'CLM-1001' }, body: { kind: 'PAYER_CALL', note: 'iso check', idempotencyKey: 'iso-followup' } },
@@ -2503,10 +2504,10 @@ const fingerprint = (db) => createHash('sha256').update(JSON.stringify(TABLES.ma
 
 function plantMarkers(db, seat) {
   db.prepare("UPDATE patients SET name = 'Zed Markerb' WHERE id = 'P-01'").run();
-  db.prepare("INSERT INTO pto_requests (id, user_id, date, hours, status, created_at) VALUES ('pto_markerb', 'u-sam', '2099-01-02', 8, 'PENDING', '2026-10-06T14:00:00Z')").run();
+  db.prepare("INSERT INTO pto_requests (id, user_id, date, hours, status, created_at) VALUES ('pto_bonly', 'u-sam', '2099-01-02', 8, 'PENDING', '2026-10-06T14:00:00Z')").run();
   db.prepare("INSERT INTO billing_tasks (id, claim_id, kind, note, created_by, created_at) VALUES ('bt_markerb', 'CLM-1001', 'PAYER_CALL', 'markerb note', 'u-marcus', '2026-10-06T14:00:00Z')").run();
-  db.prepare("INSERT INTO pending_actions (id, user_id, turn_id, tool, args_json, summary, created_at) VALUES ('act_markerb', ?, 'turn_markerb', 'create_followup', '{}', 'markerb action', '2026-10-06T14:00:00Z')").run(seat);
-  db.prepare("INSERT INTO traces (turn_id, user_id, at, steps_json) VALUES ('turn_markerb', ?, '2026-10-06T14:00:00Z', '[]')").run(seat);
+  db.prepare("INSERT INTO pending_actions (id, user_id, turn_id, tool, args_json, summary, created_at) VALUES ('act_bonly', ?, 'turn_bonly', 'create_followup', '{}', 'markerb action', '2026-10-06T14:00:00Z')").run(seat);
+  db.prepare("INSERT INTO traces (turn_id, user_id, at, steps_json) VALUES ('turn_bonly', ?, '2026-10-06T14:00:00Z', '[]')").run(seat);
   db.prepare("INSERT INTO audit_events (at, kind, detail_json) VALUES ('2026-10-06T14:00:00Z', 'markerb_event', '{\"markerb\":true}')").run();
 }
 
