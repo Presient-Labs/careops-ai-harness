@@ -11,7 +11,8 @@
     "test": "node --test --test-force-exit \"tests/**/*.test.js\"",
     "load-kb": "node scripts/load-kb.js",
     "codemap": "node scripts/codemap.js",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:signin": "playwright test -c playwright.signin.config.js"
   },
   "dependencies": {
     "@simplewebauthn/server": "^13.3.3",
