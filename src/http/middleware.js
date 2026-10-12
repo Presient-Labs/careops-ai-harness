@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { errors } from './errors.js';
 import { loadSession, touchSession, destroySession } from '../auth/sessions.js';
 
-export const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+// Holds the request's workplace lease until the handler settles, so a client that disconnects mid-await cannot free it.
+export const asyncHandler = (fn) => (req, res, next) => {
+  const done = req.holdLease?.();
+  return Promise.resolve(fn(req, res, next)).catch(next).finally(() => done?.());
+};
 export function correlationId(req, res, next) { req.correlationId = randomUUID(); res.setHeader('X-Correlation-Id', req.correlationId); next(); }
 export function parseBody(schema, body) {
   const r = schema.safeParse(body ?? {});
@@ -24,7 +28,10 @@ export function requireUser({ directory, pool, clock, stage = 'full', touch = tr
     if (stage === 'full' && s.stage !== 'full') return next(errors.secondStepRequired());
     const lease = pool.acquire(s.workplaceId);
     if (!lease) { destroySession(directory, s.sessionId); return next(errors.unauth()); }
-    res.on('close', lease.release);
+    let holds = 1; // the response itself; an async handler takes another until it settles
+    const drop = () => { if (--holds === 0) lease.release(); };
+    res.on('close', drop);
+    req.holdLease = () => { holds += 1; let done = false; return () => { if (!done) { done = true; drop(); } }; };
     const u = lease.wp.db.prepare('SELECT id, username, display_name, role, manager_id FROM users WHERE id = ?').get(s.userId);
     if (!u) return next(errors.unauth());
     req.user = { id: u.id, username: u.username, displayName: u.display_name, role: u.role, managerId: u.manager_id };

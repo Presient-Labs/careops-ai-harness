@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import express from 'express';
+import cookieParser from 'cookie-parser';
 import { startTestApp, sessionFor, mutableClock } from './helpers.js';
 import { createSession, IDLE_MS, ABSOLUTE_MS } from '../src/auth/sessions.js';
 import { createPrivateWorkplace } from '../src/workplaces/create.js';
+import { requireUser, asyncHandler } from '../src/http/middleware.js';
 
 async function personaCookie(base, persona) {
   const r = await fetch(`${base}/api/auth/demo`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ persona }) });
@@ -86,4 +90,29 @@ test('model spend and lab results are read from the directory', async (t) => {
   app.directory.prepare("INSERT INTO lab_results (lab, at, results_json) VALUES ('attacks', 't', '{\"attacks\":3}')").run();
   const dana = sessionFor({ ...app, username: 'dana' });
   assert.equal((await dana.call('/api/labs/attacks')).body.attacks, 3);
+});
+
+test('a workplace stays leased until an async handler finishes, even after the client disconnects', async (t) => {
+  const app = await startTestApp(); t.after(app.close);
+  const w = createPrivateWorkplace({ directory: app.directory, pool: app.pool, dir: app.config.workplacesDir, clock: app.clock, cap: 200, role: 'employee', username: 'alice' });
+  const alice = sessionFor({ ...app, db: app.pool.get(w.workplaceId).db, username: 'alice', workplaceId: w.workplaceId });
+  const signal = () => { let fire; const done = new Promise(r => { fire = r; }); return [done, fire]; };
+  const [gate, openGate] = signal(); const [entered, markEntered] = signal(); const [closed, markClosed] = signal(); const [finished, markFinished] = signal();
+  const probe = express();
+  probe.use(cookieParser());
+  probe.use(requireUser({ directory: app.directory, pool: app.pool, clock: app.clock }));
+  probe.get('/slow', asyncHandler(async (req, res) => {
+    res.on('close', markClosed); markEntered();
+    await gate;
+    markFinished(); res.end();
+  }));
+  const server = probe.listen(0); await once(server, 'listening');
+  t.after(() => new Promise(r => server.close(r)));
+  const ctl = new AbortController();
+  const request = fetch(`http://127.0.0.1:${server.address().port}/slow`, { headers: { cookie: alice.cookie }, signal: ctl.signal }).catch(() => 'aborted');
+  await entered;
+  ctl.abort(); await request; await closed; // the client is gone; the handler is still waiting on its "model"
+  assert.equal(app.pool.close(w.workplaceId), false);
+  openGate(); await finished; await new Promise(r => setImmediate(r));
+  assert.equal(app.pool.close(w.workplaceId), true);
 });
