@@ -5,9 +5,8 @@ test.skip(!/127\.0\.0\.1|localhost/.test(process.env.BASE_URL ?? ''), 'creates d
 
 test('a retry after a dropped connection does not create a duplicate follow-up', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Username', { exact: true }).fill('marcus');
-  await page.getByLabel('Password', { exact: true }).fill(process.env.DEMO_PASSWORD ?? 'careops-demo');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.locator('[data-persona="marcus"]').click(); // Quick look: the shared workplace's billing persona
+  await expect(page).toHaveURL(/\/app\.html/);
   await page.getByRole('link', { name: 'Claims', exact: false }).click();
   await page.getByRole('button', { name: 'Open claim CLM-1004', exact: true }).click();
   const keys = [];
