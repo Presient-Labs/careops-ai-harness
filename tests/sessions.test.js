@@ -131,3 +131,14 @@ test('background polls with X-CareOps-Background do not count as activity', asyn
   assert.equal(r.status, 401);
   assert.equal(r.body.error.code, 'session_idle');
 });
+
+test('a refused request from a private session is audited in that workplace, not the shared one', async (t) => {
+  const app = await startTestApp(); t.after(app.close);
+  const w = createPrivateWorkplace({ directory: app.directory, pool: app.pool, dir: app.config.workplacesDir, clock: app.clock, cap: 200, role: 'employee', username: 'alice' });
+  const s = createSession(app.directory, { workplaceId: w.workplaceId, userId: w.userId, stage: 'halfway' }, app.clock);
+  const r = await get(app.base, '/api/claims/X', `careops_sid=${s.id}`);
+  assert.deepEqual([r.status, r.body.error.code], [401, 'second_step_required']);
+  const denied = (db) => db.prepare("SELECT COUNT(*) n FROM audit_events WHERE kind = 'api_access_denied'").get().n;
+  assert.equal(denied(app.pool.get(w.workplaceId).db), 1);
+  assert.equal(denied(app.db), 0);
+});

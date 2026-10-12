@@ -21,6 +21,7 @@ export function requireUser({ directory, pool, clock, stage = 'full', touch = tr
   return (req, res, next) => {
     const s = loadSession(directory, req.cookies?.careops_sid, clock);
     if (!s) return next(errors.unauth());
+    req.audit = pool.get(s.workplaceId)?.audit; // refusals below are recorded in the session's own workplace
     if (s.timedOut) return next(errors.signinTimedOut());
     if (s.idle) {
       pool.get(s.workplaceId)?.audit.event({ actor: { id: s.userId }, kind: 'session_idle_logoff', security: true });
