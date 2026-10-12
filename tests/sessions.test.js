@@ -116,3 +116,18 @@ test('a workplace stays leased until an async handler finishes, even after the c
   openGate(); await finished; await new Promise(r => setImmediate(r));
   assert.equal(app.pool.close(w.workplaceId), true);
 });
+
+test('background polls with X-CareOps-Background do not count as activity', async (t) => {
+  const clock = mutableClock('2026-10-06T14:00:00Z');
+  const app = await startTestApp({ clock }); t.after(app.close);
+  const dana = sessionFor({ ...app, username: 'dana' });
+  for (let minutes = 5; minutes <= 15; minutes += 5) {
+    clock.advance(5 * 60_000);
+    const poll = await fetch(`${app.base}/api/audit?limit=5`, { headers: { cookie: dana.cookie, 'x-careops-background': '1' } });
+    assert.equal(poll.status, 200);
+  }
+  clock.advance(60_000); // 16 minutes in; the polls never kept the session alive
+  const r = await dana.call('/api/audit?limit=5');
+  assert.equal(r.status, 401);
+  assert.equal(r.body.error.code, 'session_idle');
+});

@@ -10,7 +10,7 @@ export function audit(root, ctx) {
     enabled = !enabled;
     automatic.textContent = `Auto-refresh: ${enabled ? 'on' : 'off'}`;
     automatic.setAttribute('aria-pressed', String(enabled));
-    if (enabled) { load(); timer = setInterval(load, 15000); }
+    if (enabled) { load(); timer = setInterval(() => load({ background: true }), 15000); }
     else clearInterval(timer);
   });
   automatic.setAttribute('aria-pressed', 'false');
@@ -20,10 +20,10 @@ export function audit(root, ctx) {
   root.append(heading('Audit Log', 'See who did what, and inspect the checks behind each assistant turn. Reset lives in Demo Controls.'), feedback,
     el('div', { class: 'toolbar' }, el('label', { class: 'checkbox-label', for: 'security-only' }, filter, 'Security events only'), el('div', { class: 'button-row' }, refresh, automatic)),
     el('p', { class: 'small muted' }, 'Showing up to 100 events, newest first. Auto-refresh checks every 15 seconds.'), content);
-  async function load() {
+  async function load(options) { // the auto-refresh timer passes { background: true }; every other caller is a person acting
     const current = ++ticket;
     refresh.disabled = true;
-    const result = await api(`/audit?${filter.checked ? 'security=1&' : ''}limit=100`);
+    const result = await api(`/audit?${filter.checked ? 'security=1&' : ''}limit=100`, { background: options?.background === true });
     if (!ctx.active() || current !== ticket) return;
     refresh.disabled = false;
     if (result.error) { message(feedback, result.error.message); if (!content.querySelector('table')) content.replaceChildren(empty('Audit records could not be loaded.')); return; }

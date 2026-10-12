@@ -15,7 +15,8 @@ export function parseBody(schema, body) {
 }
 // Identity comes only from the server-side session; the client never asserts a role. The session names the workplace,
 // and this request reads and writes only that workplace's database (leased, so it cannot be closed mid-request).
-// touch = false: the request does not count as activity (the Demo mailbox page polls; it must not hold a session open).
+// touch = false, or an X-CareOps-Background: 1 header: the request does not count as activity (the Demo mailbox page and
+// the audit auto-refresh poll; neither may hold a session open).
 export function requireUser({ directory, pool, clock, stage = 'full', touch = true }) {
   return (req, res, next) => {
     const s = loadSession(directory, req.cookies?.careops_sid, clock);
@@ -37,7 +38,7 @@ export function requireUser({ directory, pool, clock, stage = 'full', touch = tr
     req.user = { id: u.id, username: u.username, displayName: u.display_name, role: u.role, managerId: u.manager_id };
     req.session = s; req.db = lease.wp.db; req.audit = lease.wp.audit; req.workplaceId = s.workplaceId;
     if (req.method !== 'GET' && req.get('x-csrf-token') !== s.csrf) return next(errors.forbidden('Missing or invalid CSRF token.'));
-    if (touch) touchSession(directory, s.sessionId, clock);
+    if (touch && req.get('x-careops-background') !== '1') touchSession(directory, s.sessionId, clock);
     next();
   };
 }

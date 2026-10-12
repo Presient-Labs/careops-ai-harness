@@ -1,10 +1,12 @@
 let csrfToken = null;
 
-export async function api(path, { method = 'GET', body } = {}) {
+// background: true is for polls. The server does not count them as activity, and neither does the page's idle timer.
+export async function api(path, { method = 'GET', body, background = false } = {}) {
   const verb = method.toUpperCase();
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (verb === 'POST' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  if (background) headers['X-CareOps-Background'] = '1';
   try {
     const response = await fetch(`/api${path}`, {
       method: verb, headers, credentials: 'same-origin', cache: 'no-store',
@@ -24,7 +26,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     }
     if (typeof data.csrfToken === 'string') csrfToken = data.csrfToken; // every sign-in step issues a new session and token
     if (path === '/auth/logout') csrfToken = null;
-    window.dispatchEvent(new CustomEvent('careops:activity'));
+    if (!background) window.dispatchEvent(new CustomEvent('careops:activity'));
     return data;
   } catch {
     return { error: { code: 'network_error', message: verb === 'POST'
