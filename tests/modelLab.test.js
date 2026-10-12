@@ -92,7 +92,7 @@ test('the chat default is recomputed from stored results with the current rule',
     { id: 'openai/gpt-oss-120b', passed: 31, total: 34, errors: 2, passRate: 31 / 34, avgCostUsd: 0.000134 },
     { id: 'qwen/qwen3-235b-a22b-2507', passed: 36, total: 36, errors: 0, passRate: 1, avgCostUsd: 0.000252 },
   ] };
-  app.db.prepare("INSERT INTO lab_results (lab, at, results_json) VALUES ('models', 'x', ?)").run(JSON.stringify(stored));
+  app.directory.prepare("INSERT INTO lab_results (lab, at, results_json) VALUES ('models', 'x', ?)").run(JSON.stringify(stored));
   const { call } = await app.login('jordan');
   assert.equal((await call('/api/models')).body.default, 'qwen/qwen3-235b-a22b-2507');
   const dana = await app.login('dana');

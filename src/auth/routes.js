@@ -1,45 +1,34 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { asyncHandler, parseBody, requireUser } from '../http/middleware.js';
-import { errors, HttpError } from '../http/errors.js';
-import { hashPassword, verifyPassword } from './passwords.js';
-import { createSession, destroySession } from './sessions.js';
+import { parseBody, requireUser } from '../http/middleware.js';
+import { errors } from '../http/errors.js';
+import { SHARED } from '../db/directory.js';
+import { createSession, destroySession, cookieOptions, IDLE_MS } from './sessions.js';
 
 const DEMO_PERSONAS = ['jordan', 'priya', 'marcus', 'dana'];
 const Persona = z.object({ persona: z.enum(DEMO_PERSONAS) }).strict();
-const Login = z.object({ username: z.string().min(1).max(64), password: z.string().min(1).max(200) });
-// Compared against when the username doesn't exist, so response time doesn't reveal which usernames are real.
-const DUMMY_HASH = hashPassword('careops-no-such-user');
 const publicUser = (u) => ({ id: u.id, username: u.username, displayName: u.display_name ?? u.displayName, role: u.role });
 
-export function authRoutes({ db, clock, config, audit }) {
+export function authRoutes({ directory, pool, clock, config }) {
   const r = Router();
-  const cookieOpts = { httpOnly: true, sameSite: 'strict', secure: config.secureCookies, path: '/', maxAge: 8 * 3600 * 1000 };
-  r.post('/login', rateLimit({ windowMs: 60_000, limit: 10, skipSuccessfulRequests: true, handler: (req, res, next) => next(errors.rateLimited()) }), asyncHandler(async (req, res) => {
-    const { username, password } = parseBody(Login, req.body);
-    const u = db.prepare('SELECT * FROM users WHERE username = ?').get(username.toLowerCase());
-    const ok = verifyPassword(password, u?.password_hash ?? DUMMY_HASH) && Boolean(u);
-    if (!ok) {
-      audit.event({ kind: 'login_failed', security: true, detail: { username: username.slice(0, 64) } });
-      throw new HttpError(401, 'unauthenticated', 'Username or password is incorrect.');
-    }
-    const s = createSession(db, u.id, clock);
-    audit.event({ actor: { id: u.id, role: u.role }, kind: 'login_success' });
-    res.cookie('careops_sid', s.id, cookieOpts).json({ user: publicUser(u), csrfToken: s.csrf });
-  }));
-  // Persona shortcut for the public synthetic demo: the server picks the account and creates a normal session;
-  // the browser can only name one of four demo personas, never a role.
+  const cookie = cookieOptions(config);
+  // Quick look for the shared demo workplace: the server picks the account and creates a normal, full session.
+  // The browser can only name one of four demo personas, never a role. Demo logins use /accounts and /login instead.
   r.post('/demo', rateLimit({ windowMs: 60_000, limit: 30, handler: (req, res, next) => next(errors.rateLimited()) }), (req, res) => {
     const { persona } = parseBody(Persona, req.body);
-    const u = db.prepare('SELECT * FROM users WHERE username = ?').get(persona);
+    const u = pool.shared.db.prepare('SELECT * FROM users WHERE username = ?').get(persona);
     if (!u) throw errors.notFound('Demo persona not found.');
-    const s = createSession(db, u.id, clock);
-    audit.event({ actor: { id: u.id, role: u.role }, kind: 'login_success', detail: { via: 'persona' } });
-    res.cookie('careops_sid', s.id, cookieOpts).json({ user: publicUser(u), csrfToken: s.csrf });
+    destroySession(directory, req.cookies?.careops_sid);
+    const s = createSession(directory, { workplaceId: SHARED, userId: u.id }, clock);
+    pool.shared.audit.event({ actor: { id: u.id, role: u.role }, kind: 'login_success', detail: { via: 'persona' } });
+    res.cookie('careops_sid', s.id, cookie).json({ user: publicUser(u), csrfToken: s.csrf });
   });
-  const authed = requireUser({ db, clock });
-  r.get('/me', authed, (req, res) => res.json({ user: publicUser(req.user), csrfToken: req.session.csrf }));
-  r.post('/logout', authed, (req, res) => { destroySession(db, req.session.sessionId); res.clearCookie('careops_sid', { path: '/' }).status(204).end(); });
+  const full = requireUser({ directory, pool, clock });
+  const any = requireUser({ directory, pool, clock, stage: 'any' });
+  r.get('/me', full, (req, res) => res.json({ user: publicUser(req.user), csrfToken: req.session.csrf,
+    session: { idleTimeoutMs: IDLE_MS, expiresAt: new Date(req.session.expiresAt).toISOString(), accountSession: Boolean(req.session.accountId) } }));
+  r.post('/ping', full, (req, res) => res.status(204).end()); // "Stay signed in": any authenticated request counts as activity
+  r.post('/logout', any, (req, res) => { destroySession(directory, req.session.sessionId); res.clearCookie('careops_sid', { path: '/' }).status(204).end(); });
   return r;
 }

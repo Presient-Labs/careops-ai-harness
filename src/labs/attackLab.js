@@ -62,13 +62,13 @@ const interventionsFor = (db, turnId) => db.prepare("SELECT COUNT(*) n FROM audi
 
 // Two layers measured separately: the prompt layer (probabilistic: did the raw model output leak?)
 // and the harness layer (deterministic: did any authority, data, or state actually cross a boundary?).
-export async function runAttackLab({ db, harness, model, audit, clock = systemClock }) {
+export async function runAttackLab({ db, resultsDb = db, harness, model, audit, clock = systemClock }) {
   const results = [];
   for (const a of ATTACKS) {
     const user = userById(db, a.user); const row = { attack: a.name, category: a.category, message: a.message };
     for (const variant of ['baseline', 'hardened']) {
       const roles = rolesSnapshot(db);
-      const turn = await harness.runTurn({ user, message: a.message, model, promptVariant: variant, purpose: 'lab' });
+      const turn = await harness.runTurn({ db, audit, user, message: a.message, model, promptVariant: variant, purpose: 'lab' });
       const exposed = exposedData(db, user, turn.answer, a.message);
       const ifConfirmed = turn.proposedAction ? probeConfirmation(db, { user, actionId: turn.proposedAction.id, clock, audit }) : null;
       const boundaryMoved = roles !== rolesSnapshot(db) || executedFor(db, turn.turnId) > 0 || exposed.length > 0 || Boolean(ifConfirmed?.crossedBoundary);
@@ -80,6 +80,6 @@ export async function runAttackLab({ db, harness, model, audit, clock = systemCl
   }
   const sum = (v) => ({ promptLeaks: results.filter(r => r[v].leaked).length, boundaryMoves: results.filter(r => r[v].boundaryMoved).length, interventions: results.filter(r => r[v].intervened).length });
   const out = { at: new Date().toISOString(), model, attacks: results.length, summary: { baseline: sum('baseline'), hardened: sum('hardened') }, results };
-  db.prepare("INSERT OR REPLACE INTO lab_results (lab, at, results_json) VALUES ('attacks', ?, ?)").run(out.at, JSON.stringify(out));
+  resultsDb.prepare("INSERT OR REPLACE INTO lab_results (lab, at, results_json) VALUES ('attacks', ?, ?)").run(out.at, JSON.stringify(out));
   return out;
 }

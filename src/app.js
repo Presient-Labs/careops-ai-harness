@@ -17,9 +17,12 @@ import { claimRoutes } from './routes/claims.js';
 import { adminRoutes } from './routes/admin.js';
 import { labRoutes } from './routes/labs.js';
 
+import { openDirectory, migrateFromShared } from './db/directory.js';
+import { createWorkplacePool } from './workplaces/pool.js';
+
 const WEB_DIR = fileURLToPath(new URL('../web', import.meta.url));
 
-export function createApp({ db, kb, provider, clock = systemClock, config, logger = console }) {
+export function createApp({ db, directory: providedDirectory, kb, provider, clock = systemClock, config, logger = console }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -30,19 +33,22 @@ export function createApp({ db, kb, provider, clock = systemClock, config, logge
   app.get(/^\/careops(\/.*)?$/, (req, res) => res.redirect(301, '/')); // the link shared as shawndemos.com/careops
   app.use(express.json({ limit: '32kb' }));
   app.use(cookieParser());
+  const directory = providedDirectory ?? openDirectory(':memory:', clock);
+  migrateFromShared(directory, db);
   const audit = createAudit(db, clock);
-  const budget = createBudget(db, clock, config.dailyBudgetUsd);
-  app.use(healthRoutes({ db, kb, config, budget, clock }));
-  app.use('/api/auth', authRoutes({ db, clock, config, audit }));
-  app.use('/api', requireUser({ db, clock }));
+  const pool = createWorkplacePool({ directory, sharedDb: db, sharedAudit: audit, dir: config.workplacesDir, clock });
+  const budget = createBudget(directory, clock, config.dailyBudgetUsd);
+  app.use(healthRoutes({ directory, pool, kb, config, budget, clock }));
+  app.use('/api/auth', authRoutes({ directory, pool, clock, config }));
+  app.use('/api', requireUser({ directory, pool, clock }));
   const prompts = loadPrompts();
-  const harness = createHarness({ db, kb, provider, clock, audit, budget, prompts, config });
-  app.use('/api', chatRoutes({ db, clock, audit, harness, config }));
-  app.use('/api', ptoRoutes({ db, clock, audit }), claimRoutes({ db, clock, audit }), adminRoutes({ db, clock, audit, config }));
-  app.use('/api', labRoutes({ db, kb, provider, prompts, harness, budget, config, audit, clock }));
+  const harness = createHarness({ db, kb, provider, clock, audit, budget, prompts, config, modelsDb: directory });
+  app.use('/api', chatRoutes({ directory, clock, harness, config }));
+  app.use('/api', ptoRoutes({ clock }), claimRoutes({ clock }), adminRoutes({ clock, config }));
+  app.use('/api', labRoutes({ directory, kb, provider, prompts, harness, budget, config, clock }));
   app.use('/api', (req, res, next) => next(new HttpError(404, 'not_found', 'Not found.')));
   app.use(express.static(WEB_DIR, { extensions: ['html'] }));
   app.use(auditDenials(audit, clock));
   app.use(errorHandler(logger));
-  return { app, audit, harness };
+  return { app, audit, harness, directory, pool };
 }

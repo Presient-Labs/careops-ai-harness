@@ -68,21 +68,21 @@ export function getDefaultModel(db, config) {
   return (models?.length && chooseDefault(models)) || config.defaultModel;
 }
 
-export function createHarness({ db, kb, provider, clock, audit, budget, prompts, config }) {
-  function finish(trace, turn, ev) {
+export function createHarness({ db, kb, provider, clock, audit, budget, prompts, config, modelsDb = db }) {
+  function finish(trace, turn, ev, turnAudit) {
     const eventId = ev({ actor: trace.user, kind: 'chat_turn', turnId: turn.turnId, detail: { status: turn.status, model: turn.model } });
     trace.decision.auditEventId = eventId;
     trace.add('audit', 'ok', `Recorded as ${eventId} (turn ${turn.turnId}).`, { status: turn.status, auditEventId: eventId });
-    audit.saveTrace(trace.toJSON());
+    turnAudit.saveTrace(trace.toJSON());
     return turn;
   }
 
-  async function runTurn({ user, message, model = getDefaultModel(db, config), promptVariant = 'hardened', purpose = 'chat' }) {
+  async function runTurn({ db: turnDb = db, audit: turnAudit = audit, user, message, model = getDefaultModel(modelsDb, config), promptVariant = 'hardened', purpose = 'chat' }) {
     const turnId = newId('turn');
     const trace = startTrace(turnId, user, clock);
     // lab turns are tagged so they are never mistaken for a real person's activity in the audit log
-    const ev = (e) => audit.event(purpose === 'chat' ? e : { ...e, detail: { ...(e.detail ?? {}), purpose } });
-    const reply = (f) => finish(trace, { turnId, status: 'answered', answer: '', citations: [], clarification: null, proposedAction: null, model: null, costUsd: 0, latencyMs: 0, safety, ...f }, ev);
+    const ev = (e) => turnAudit.event(purpose === 'chat' ? e : { ...e, detail: { ...(e.detail ?? {}), purpose } });
+    const reply = (f) => finish(trace, { turnId, status: 'answered', answer: '', citations: [], clarification: null, proposedAction: null, model: null, costUsd: 0, latencyMs: 0, safety, ...f }, ev, turnAudit);
     // Plain-English decision record shown at the top of "Why did this happen?"
     const decision = trace.decision = { actor: user.displayName, role: user.role, intent: null, requiredPermission: null, authorization: null,
       restrictedRetrieval: 'NOT EXECUTED', modelReceivedRestrictedData: 'NO', sources: [], model: null, requestedAction: null,
@@ -105,7 +105,7 @@ export function createHarness({ db, kb, provider, clock, audit, budget, prompts,
 
     // 2. STATE — authoritative facts from the database
     const dateRes = intent === 'pto_request' ? resolvePtoDate(message, clock.now()) : null;
-    const facts = gatherFacts(db, user, intent, claimIds, dateRes, message);
+    const facts = gatherFacts(turnDb, user, intent, claimIds, dateRes, message);
     trace.add('state', 'ok', describeFacts(facts), { facts });
 
     if (facts.missingClaimIds?.length) {
@@ -213,7 +213,7 @@ export function createHarness({ db, kb, provider, clock, audit, budget, prompts,
     trace.add('validation', v.actionRejection ? 'denied' : 'ok', v.summary, { actionRejection: v.actionRejection });
 
     // 6. EXECUTION — deterministic, only after the user confirms
-    const proposedAction = v.action ? proposeAction(db, { user, turnId, action: v.action, clock }) : null;
+    const proposedAction = v.action ? proposeAction(turnDb, { user, turnId, action: v.action, clock }) : null;
     decision.execution = proposedAction ? 'AWAITING CONFIRMATION' : 'NONE';
     trace.add('execution', proposedAction ? 'ok' : 'skipped', proposedAction ? `Proposed "${proposedAction.summary}". Waiting for the user to confirm — the model cannot execute it.` : 'No action proposed.', { proposedAction });
     const clarification = v.data.needs_clarification ? { question: v.data.needs_clarification, options: [] } : null;

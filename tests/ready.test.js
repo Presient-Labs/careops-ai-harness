@@ -22,7 +22,7 @@ test('degraded when the daily AI budget is used up', async (t) => {
 test('degraded when the last provider calls all failed', async (t) => {
   const app = await startTestApp(); t.after(app.close);
   const now = new Date('2026-10-06T14:00:00Z').toISOString();
-  for (let i = 0; i < 3; i++) app.db.prepare("INSERT INTO llm_calls (at, day, model, purpose, cost_usd, ok) VALUES (?, '2026-10-06', 'm', 'chat', 0, 0)").run(now);
+  for (let i = 0; i < 3; i++) app.directory.prepare("INSERT INTO llm_calls (at, day, model, purpose, cost_usd, ok) VALUES (?, '2026-10-06', 'm', 'chat', 0, 0)").run(now);
   const r = await (await fetch(`${app.base}/ready`)).json();
   assert.equal(r.status, 'degraded'); assert.equal(r.checks.reasoningProvider, 'down');
 });
