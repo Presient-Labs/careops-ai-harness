@@ -228,3 +228,23 @@ test('sign-in attempts are throttled at 20 a minute per address', async (t) => {
   for (let i = 0; i < 20; i += 1) await a.call('/api/auth/login', { method: 'POST', body: { username: `nobody${i}`, password: 'x'.repeat(12) } });
   assert.equal((await a.call('/api/auth/login', { method: 'POST', body: { username: 'nobody', password: 'x'.repeat(12) } })).status, 429);
 });
+
+test('setup confirm codes are throttled at 20 a minute per address', async (t) => {
+  const app = await startTestApp({ clock: mutableClock('2026-10-06T14:00:00Z') }); t.after(app.close);
+  // The 20 a minute is one budget per address, shared with sign-up and "send code"; wrong codes never lock the account.
+  async function wrongUntilThrottled(path, spent) {
+    const a = agent(app.base, path.includes('totp') ? '198.51.100.21' : '198.51.100.22');
+    const created = await a.call('/api/auth/accounts', { method: 'POST', body: { username: path.includes('totp') ? 'totpuser' : 'mailuser', password: PW, role: 'employee' } });
+    assert.equal(created.status, 201);
+    if (path.includes('totp')) assert.equal((await a.call('/api/auth/totp/setup', { method: 'POST' })).status, 200);
+    else assert.equal((await a.call('/api/auth/email/send', { method: 'POST', body: { purpose: 'enable' } })).status, 204);
+    for (let i = 0; i < 20 - spent; i += 1) {
+      const res = await a.call(path, { method: 'POST', body: { code: '000000' } });
+      assert.deepEqual([res.status, res.body.error.code], [422, 'invalid_code'], `${path} attempt ${i + 1}`);
+    }
+    const over = await a.call(path, { method: 'POST', body: { code: '000000' } });
+    assert.deepEqual([over.status, over.body.error.code], [429, 'rate_limited'], path);
+  }
+  await wrongUntilThrottled('/api/auth/totp/confirm', 1);   // sign-up is the 1st throttled call
+  await wrongUntilThrottled('/api/auth/email/confirm', 2);  // sign-up and "send code" are the 1st and 2nd
+});

@@ -157,7 +157,7 @@ export function accountRoutes({ directory, pool, clock, config }) {
     issueEmailCode({ directory, sender: mailbox, clock, accountId: a.id, purpose });
     res.status(204).end();
   });
-  r.post('/email/confirm', signedIn, (req, res) => {
+  r.post('/email/confirm', throttle, signedIn, (req, res) => {
     const a = setupAccount(req);
     const { code } = parseBody(Code, req.body);
     if (!verifyEmailCode({ directory, clock, accountId: a.id, purpose: 'enable', code })) throw errors.invalidCode();
@@ -175,7 +175,7 @@ export function accountRoutes({ directory, pool, clock, config }) {
     const url = otpauthUrl({ secret, account: a.username });
     res.json({ secret, otpauthUrl: url, qr: qrDataUrl(url) });
   });
-  r.post('/totp/confirm', signedIn, (req, res) => {
+  r.post('/totp/confirm', throttle, signedIn, (req, res) => {
     const a = setupAccount(req);
     const t = directory.prepare('SELECT * FROM totp_credentials WHERE account_id = ? AND confirmed_at IS NULL').get(a.id);
     if (!t) throw errors.conflict('Start authenticator setup first.');
