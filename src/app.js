@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { errorHandler, HttpError } from './http/errors.js';
 import { correlationId, requireUser, auditDenials } from './http/middleware.js';
 import { authRoutes } from './auth/routes.js';
+import { accountRoutes } from './auth/accountRoutes.js';
 import { healthRoutes } from './routes/health.js';
 import { createAudit } from './audit/audit.js';
 import { systemClock } from './util/clock.js';
@@ -40,6 +41,7 @@ export function createApp({ db, directory: providedDirectory, kb, provider, cloc
   const budget = createBudget(directory, clock, config.dailyBudgetUsd);
   app.use(healthRoutes({ directory, pool, kb, config, budget, clock }));
   app.use('/api/auth', authRoutes({ directory, pool, clock, config }));
+  app.use('/api/auth', accountRoutes({ directory, pool, clock, config }));
   app.use('/api', requireUser({ directory, pool, clock }));
   const prompts = loadPrompts();
   const harness = createHarness({ db, kb, provider, clock, audit, budget, prompts, config, modelsDb: directory });
