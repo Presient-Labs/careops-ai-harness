@@ -23,3 +23,9 @@ export function seedDb(db, { clock, demoPassword }) {
     db.prepare("UPDATE pto_balances SET hours_pending = 8 WHERE user_id = 'u-sam'").run();
   })();
 }
+
+// A demo login takes the seat of its role's persona inside its own workplace copy: same id and records, the visitor's name.
+export function applySeat(db, { userId, username, displayName }) {
+  const r = db.prepare('UPDATE users SET username = ?, display_name = ? WHERE id = ?').run(username, displayName, userId);
+  if (r.changes !== 1) throw new Error(`no seat ${userId}`);
+}
