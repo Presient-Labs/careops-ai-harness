@@ -17,6 +17,19 @@ services:
       - traefik.http.routers.careops.entrypoints=websecure
       - traefik.http.routers.careops.tls.certresolver=letsencrypt
       - traefik.http.services.careops.loadbalancer.server.port=3000
+      # shawndemos.com/careops/: a second router next to the one above. /careops redirects to /careops/, then the prefix is
+      # stripped and sent as X-Forwarded-Prefix, which scopes the session cookie to /careops (src/auth/sessions.js).
+      - traefik.http.routers.careops-path.rule=Host(`shawndemos.com`) && PathPrefix(`/careops`)
+      - traefik.http.routers.careops-path.entrypoints=websecure
+      - traefik.http.routers.careops-path.tls.certresolver=letsencrypt
+      - traefik.http.routers.careops-path.middlewares=careops-slash,careops-strip
+      - traefik.http.routers.careops-path.service=careops
+      # Explicit priority: Traefik's default is the rule's length, and the 100-character rule above would win otherwise.
+      - traefik.http.routers.careops-path.priority=1000
+      - traefik.http.middlewares.careops-slash.redirectregex.regex=^https://shawndemos\.com/careops$$
+      - traefik.http.middlewares.careops-slash.redirectregex.replacement=https://shawndemos.com/careops/
+      - traefik.http.middlewares.careops-slash.redirectregex.permanent=true
+      - traefik.http.middlewares.careops-strip.stripprefix.prefixes=/careops
   careops-kb:
     build:
       context: ${KB_SERVER_SRC:-../knowledge-base-server}
