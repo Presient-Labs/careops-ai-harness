@@ -4,7 +4,7 @@ Frontend (`web/`) and backend (`src/`) are built in parallel against this file. 
 
 ## Conventions
 
-- All endpoints are same-origin JSON under `/api`. Session cookie `careops_sid` (httpOnly, SameSite=Strict).
+- All endpoints are same-origin JSON under `/api`. Session cookie `careops_sid` (httpOnly, SameSite=Strict; Path=/, or Path=/careops when served at shawndemos.com/careops/ behind Traefik's StripPrefix, which sends `X-Forwarded-Prefix: /careops`). The front end uses only relative URLs, so it works at either place.
 - Every **mutating** request (POST) except `/api/auth/login` must send header `X-CSRF-Token: <csrfToken>` (from login or `/api/auth/me`).
 - Errors: HTTP 4xx/5xx with body `{"error": {"code": "string", "message": "user-safe text", "correlationId": "string"}}`.
   Codes used: `unauthenticated` (401), `forbidden` (403), `not_found` (404), `invalid_request` (400), `conflict` (409), `rate_limited` (429), `ai_unavailable` (503), `internal` (500).

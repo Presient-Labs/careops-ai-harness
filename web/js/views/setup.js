@@ -6,7 +6,7 @@ export async function setup() {
   const error = document.querySelector('#setup-error');
   const state = await api('/auth/second-step');
   if (state.error) { message(error, state.error.message); return; }
-  if (!state.canSetup) { location.replace('/verify.html'); return; }
+  if (!state.canSetup) { location.replace('verify.html'); return; }
   let stage = state.stage;
   const mark = (id) => {
     const card = document.querySelector(`#method-${id}`);
@@ -24,7 +24,7 @@ export async function setup() {
       document.querySelector('#recovery-codes').replaceChildren(...result.recoveryCodes.map(c => el('li', {}, el('code', {}, `${c.slice(0, 5)}-${c.slice(5)}`))));
       document.querySelector('#recovery').hidden = false;
       document.querySelector('#recovery-done').focus();
-    } else if (wasHalfway) location.assign('/app.html');
+    } else if (wasHalfway) location.assign('app.html');
     else message(document.querySelector('#setup-done'), 'Added. You can add another, or go back to your workspace.');
   };
   const run = async (fn) => { message(error, ''); const r = await fn(); if (r?.error) message(error, r.error.message); return r; };

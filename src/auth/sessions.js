@@ -5,7 +5,12 @@ export const ABSOLUTE_MS = 8 * 3600_000;
 export const HALFWAY_MS = 5 * 60_000;
 
 // The browser cookie carries only a random id; the server holds the session. No maxAge: the server enforces expiry.
-export const cookieOptions = (config) => ({ httpOnly: true, sameSite: 'strict', secure: config.secureCookies, path: '/' });
+// Served at shawndemos.com/careops/, Traefik strips the prefix and names it in X-Forwarded-Prefix; the cookie is then
+// scoped to /careops so the other apps on that domain never receive it. Only this one prefix is accepted, so a client
+// cannot pick its own cookie path; at the subdomain (no header) the path is /.
+export const MOUNT_PREFIX = '/careops';
+export const cookiePath = (req) => (req.get('x-forwarded-prefix') === MOUNT_PREFIX ? MOUNT_PREFIX : '/');
+export const cookieOptions = (config, req) => ({ httpOnly: true, sameSite: 'strict', secure: config.secureCookies, path: cookiePath(req) });
 
 export function createSession(directory, { workplaceId, userId, accountId = null, stage = 'full' }, clock) {
   const now = clock.now().getTime();
