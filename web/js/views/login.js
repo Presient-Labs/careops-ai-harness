@@ -9,7 +9,7 @@ const REASONS = {
   unauthenticated: 'Please sign in.',
 };
 // After the password: straight in, the second step, or (a new login with none yet) its setup.
-const next = (r) => location.assign(r.stage === 'full' ? '/app.html' : r.methods.length ? '/verify.html' : '/setup.html');
+const next = (r) => location.assign(r.stage === 'full' ? 'app.html' : r.methods.length ? 'verify.html' : 'setup.html');
 
 export function login() {
   const reason = new URLSearchParams(location.search).get('reason');
@@ -22,7 +22,7 @@ export function login() {
     busy(passkey, true, 'Waiting for your passkey…'); message(error, '');
     const result = await signInWithPasskey(api);
     busy(passkey, false);
-    if (result.error) message(error, result.error.message); else location.assign('/app.html');
+    if (result.error) message(error, result.error.message); else location.assign('app.html');
   });
   personas();
 }
@@ -50,7 +50,7 @@ function personas() {
       row.classList.add('is-busy'); message(personaError, '');
       const result = await api('/auth/demo', { method: 'POST', body: { persona: row.dataset.persona } });
       if (result.error) { message(personaError, result.error.message); for (const other of rows) other.disabled = false; row.classList.remove('is-busy'); }
-      else location.assign('/app.html');
+      else location.assign('app.html');
     });
   }
 }

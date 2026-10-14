@@ -8,9 +8,9 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
-| [app.js](src/app.js) | 48 | `createApp` | — |
-| [config.js](src/config.js) | 14 | `loadConfig` | — |
-| [main.js](src/main.js) | 15 | — | — |
+| [app.js](src/app.js) | 58 | `createApp` | — |
+| [config.js](src/config.js) | 27 | `loadConfig` | — |
+| [main.js](src/main.js) | 24 | — | — |
 
 ## src/audit
 
@@ -22,17 +22,27 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
+| [accountRoutes.js](src/auth/accountRoutes.js) | 220 | `MAX_FAILURES`, `LOCK_MS`, `accountRoutes` | The account behind this session; Quick look sessions have none. |
+| [email.js](src/auth/email.js) | 42 | `EMAIL_CODE_TTL_MS`, `EMAIL_CODES_PER_WINDOW`, `createDemoMailbox`, `issueEmailCode`, `verifyEmailCode`, `listMailbox` | The EmailSender for the demo: messages land in the account's Demo mailbox page instead of being sent. |
+| [passkeys.js](src/auth/passkeys.js) | 61 | `CHALLENGE_TTL_MS`, `startRegistration`, `finishRegistration`, `startLogin`, `finishLogin` | Passkeys (WebAuthn). User verification is required, so a passkey proves both the device and the person. |
 | [passwords.js](src/auth/passwords.js) | 3 | `hashPassword`, `verifyPassword` | — |
-| [routes.js](src/auth/routes.js) | 45 | `authRoutes` | Compared against when the username doesn't exist, so response time doesn't reveal which usernames are real. |
-| [sessions.js](src/auth/sessions.js) | 15 | `createSession`, `loadSession`, `destroySession` | — |
+| [qr.js](src/auth/qr.js) | 10 | `qrDataUrl` | Server-side QR for the otpauth URL, returned as an image data URL (the page's CSP allows data: images, not inline markup). |
+| [recovery.js](src/auth/recovery.js) | 12 | `normalizeCode`, `generateRecoveryCodes`, `hashRecoveryCode` | No 0/o, 1/l/i: recovery codes are read off a screen and typed back. |
+| [routes.js](src/auth/routes.js) | 33 | `authRoutes` | Quick look for the shared demo workplace: the server picks the account and creates a normal, full session. |
+| [rules.js](src/auth/rules.js) | 19 | `RESERVED_USERNAMES`, `usernameProblem`, `passwordProblem` | Persona usernames exist inside every workplace copy, so a visitor cannot take one. |
+| [secrets.js](src/auth/secrets.js) | 23 | `encryptSecret`, `decryptSecret`, `sha256Hex` | Authenticator secrets are stored encrypted (AES-256-GCM) under TOTP_KEY, so a copied database file alone cannot mint codes. |
+| [sessions.js](src/auth/sessions.js) | 39 | `IDLE_MS`, `ABSOLUTE_MS`, `HALFWAY_MS`, `MOUNT_PREFIX`, `cookiePath`, `cookieOptions`, `createSession`, `loadSession`, `touchSession`, `destroySession` | The browser cookie carries only a random id; the server holds the session. No maxAge: the server enforces expiry. |
+| [totp.js](src/auth/totp.js) | 53 | `STEP_S`, `base32Encode`, `base32Decode`, `hotp`, `stepAt`, `totpAt`, `verifyTotp`, `generateTotpSecret`, `otpauthUrl` | RFC 6238 authenticator codes: SHA-1, 6 digits, 30-second steps (what Google and Microsoft Authenticator use). |
 
 ## src/db
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
+| [directory.js](src/db/directory.js) | 38 | `SHARED`, `openDirectory`, `migrateFromShared`, `logSecurity` | The deployment-wide database: workplaces, demo accounts and their credentials, sessions, the Demo mailbox, |
+| [directory.sql](src/db/directory.sql) | 42 | — | — |
 | [index.js](src/db/index.js) | 17 | `openDb` | forward-only migration for databases created before the decision summary existed |
 | [schema.sql](src/db/schema.sql) | 34 | — | — |
-| [seed.js](src/db/seed.js) | 25 | `seedDb` | Restores business data to a known state. Users are upserted (never deleted) so sessions survive; |
+| [seed.js](src/db/seed.js) | 31 | `seedDb`, `applySeat` | Restores business data to a known state. Users are upserted (never deleted) so sessions survive; |
 
 ## src/domain
 
@@ -58,8 +68,9 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
-| [errors.js](src/http/errors.js) | 24 | `HttpError`, `errors`, `errorHandler` | body-parser errors (bad JSON, oversized body) are the client's fault, not a server error |
-| [middleware.js](src/http/middleware.js) | 46 | `asyncHandler`, `correlationId`, `parseBody`, `requireUser`, `requireRole`, `auditDenials` | Identity comes only from the server-side session; the client never asserts a role. |
+| [errors.js](src/http/errors.js) | 34 | `HttpError`, `errors`, `errorHandler` | body-parser errors (bad JSON, oversized body) are the client's fault, not a server error |
+| [ipKey.js](src/http/ipKey.js) | 14 | `ipKey` | The key a per-address limit counts by. One IPv6 customer usually holds a whole /64, so it counts as one address. |
+| [middleware.js](src/http/middleware.js) | 70 | `asyncHandler`, `correlationId`, `parseBody`, `requireUser`, `requireRole`, `auditDenials` | Holds the request's workplace lease until the handler settles, so a client that disconnects mid-await cannot free it. |
 
 ## src/labs
 
@@ -99,12 +110,13 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
-| [admin.js](src/routes/admin.js) | 14 | `adminRoutes` | — |
+| [admin.js](src/routes/admin.js) | 18 | `adminRoutes` | A private workplace's admin is a visitor in Dana's seat; the reset restores the data, not Dana's name. |
 | [chat.js](src/routes/chat.js) | 33 | `chatRoutes` | Withheld model output is visible only to compliance (admin); the turn's owner sees why, not what. |
 | [claims.js](src/routes/claims.js) | 40 | `claimRoutes` | — |
 | [health.js](src/routes/health.js) | 20 | `healthRoutes` | — |
-| [labs.js](src/routes/labs.js) | 34 | `labRoutes` | One lab run at a time: runs take minutes and spend money. |
+| [labs.js](src/routes/labs.js) | 37 | `labRoutes` | Lab results are one shared record; a private workplace's admin may read them but must not overwrite them. |
 | [pto.js](src/routes/pto.js) | 33 | `ptoRoutes` | — |
+| [testClock.js](src/routes/testClock.js) | 12 | `testClockRoutes` | — |
 
 ## src/tools
 
@@ -117,7 +129,15 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 
 | File | Lines | Exports | First comment |
 | --- | ---: | --- | --- |
-| [clock.js](src/util/clock.js) | 4 | `systemClock`, `fixedClock`, `nyDate` | — |
+| [clock.js](src/util/clock.js) | 9 | `systemClock`, `fixedClock`, `nyDate`, `adjustableClock` | The real-browser test's clock: real time plus an offset the test moves forward (CAREOPS_TEST_CLOCK=1, never production). |
 | [dates.js](src/util/dates.js) | 38 | `addDays`, `dow`, `isWeekend`, `addBusinessDays`, `businessDaysUntil`, `formatDate`, `requestedHours`, `resolvePtoDate` | Hours the user stated ("for 4 hours", "four hours", "half day"), or null — parsed in code so a clarification cannot drop them. |
 | [ids.js](src/util/ids.js) | 2 | `newId` | — |
 | [numbers.js](src/util/numbers.js) | 14 | `NUMBER_WORDS`, `wordsToNumber` | "nine thousand nine hundred ninety-nine" → 9999, "two and a half" → 2.5. Returns null if not a number phrase. |
+
+## src/workplaces
+
+| File | Lines | Exports | First comment |
+| --- | ---: | --- | --- |
+| [cleanup.js](src/workplaces/cleanup.js) | 41 | `cleanupExpired`, `startCleanup` | Every 10 minutes: expired sessions, challenges and creation records go; expired workplaces are closed, their |
+| [create.js](src/workplaces/create.js) | 30 | `SEATS`, `WORKPLACE_TTL_MS`, `livePrivateCount`, `createPrivateWorkplace` | A private copy of the fictional workplace for one demo login, deleted 24 hours after creation. |
+| [pool.js](src/workplaces/pool.js) | 60 | `WORKPLACE_ID`, `workplaceFile`, `removeWorkplaceFiles`, `createWorkplacePool` | Open workplace databases, at most `max` at once (least recently used closed first). A request leases its workplace, |

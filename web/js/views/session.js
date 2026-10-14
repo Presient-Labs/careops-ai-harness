@@ -17,7 +17,7 @@ export function startSessionTimer(session) {
     label.textContent = `Auto sign-out in ${Math.ceil(remaining / 60_000)} min`;
     if (idleFor >= warnMs && !dialog.open) dialog.showModal();
     if (dialog.open) left.textContent = `${Math.ceil(remaining / 1000)} seconds`;
-    if (remaining === 0) location.replace('/?reason=session_idle');
+    if (remaining === 0) location.replace('./?reason=session_idle');
   };
   tick();
   setInterval(tick, 1000);

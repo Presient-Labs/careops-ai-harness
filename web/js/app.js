@@ -76,7 +76,7 @@ async function workspace() {
     control.disabled = true;
     const response = await api('/auth/logout', { method: 'POST' });
     if (response.error) { message(document.querySelector('#global-error'), response.error.message); control.disabled = false; }
-    else { dispose(); location.replace('/'); }
+    else { dispose(); location.replace('./'); }
   });
   // Recheck identity after a history-cache restore; never reuse another session's screen.
   window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });

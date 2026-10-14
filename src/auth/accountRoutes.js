@@ -31,7 +31,6 @@ const PasskeyFinish = z.object({ challengeId: z.string().min(1).max(100), respon
 
 export function accountRoutes({ directory, pool, clock, config }) {
   const r = Router();
-  const cookie = cookieOptions(config);
   const mailbox = createDemoMailbox(directory, clock);
   const throttle = rateLimit({ windowMs: 60_000, limit: 20, keyGenerator: (req) => ipKey(req.ip), validate: false, handler: (req, res, next) => next(errors.rateLimited()) });
   const signedIn = requireUser({ directory, pool, clock, stage: 'any' });
@@ -67,7 +66,7 @@ export function accountRoutes({ directory, pool, clock, config }) {
   function issue(req, res, a, stage) {
     destroySession(directory, req.cookies?.careops_sid);
     const s = createSession(directory, { workplaceId: a.workplace_id, userId: a.user_id, accountId: a.id, stage }, clock);
-    res.cookie('careops_sid', s.id, cookie);
+    res.cookie('careops_sid', s.id, cookieOptions(config, req));
     return { stage, csrfToken: s.csrf, username: a.username, role: a.role, methods: methodsOf(a) };
   }
   // After a step is added: a halfway session that now has a step becomes full.
