@@ -28,7 +28,7 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and [docs/API
 | [passwords.js](src/auth/passwords.js) | 3 | `hashPassword`, `verifyPassword` | — |
 | [qr.js](src/auth/qr.js) | 10 | `qrDataUrl` | Server-side QR for the otpauth URL, returned as an image data URL (the page's CSP allows data: images, not inline markup). |
 | [recovery.js](src/auth/recovery.js) | 12 | `normalizeCode`, `generateRecoveryCodes`, `hashRecoveryCode` | No 0/o, 1/l/i: recovery codes are read off a screen and typed back. |
-| [routes.js](src/auth/routes.js) | 33 | `authRoutes` | Quick look for the shared demo workplace: the server picks the account and creates a normal, full session. |
+| [routes.js](src/auth/routes.js) | 38 | `authRoutes` | Quick look for the shared demo workplace: the server picks the account and creates a normal, full session. |
 | [rules.js](src/auth/rules.js) | 19 | `RESERVED_USERNAMES`, `usernameProblem`, `passwordProblem` | Persona usernames exist inside every workplace copy, so a visitor cannot take one. |
 | [secrets.js](src/auth/secrets.js) | 23 | `encryptSecret`, `decryptSecret`, `sha256Hex` | Authenticator secrets are stored encrypted (AES-256-GCM) under TOTP_KEY, so a copied database file alone cannot mint codes. |
 | [sessions.js](src/auth/sessions.js) | 39 | `IDLE_MS`, `ABSOLUTE_MS`, `HALFWAY_MS`, `MOUNT_PREFIX`, `cookiePath`, `cookieOptions`, `createSession`, `loadSession`, `touchSession`, `destroySession` | The browser cookie carries only a random id; the server holds the session. No maxAge: the server enforces expiry. |

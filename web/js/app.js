@@ -31,7 +31,7 @@ async function workspace() {
   const main = document.querySelector('#main');
   const result = await api('/auth/me');
   if (result.error) {
-    main.replaceChildren(el('h1', {}, 'Workspace unavailable'), el('p', { class: 'notice error', role: 'alert' }, result.error.message), el('a', { href: '/', class: 'button secondary' }, 'Return to sign in'));
+    main.replaceChildren(el('h1', {}, 'Workspace unavailable'), el('p', { class: 'notice error', role: 'alert' }, result.error.message), el('a', { href: './', class: 'button secondary' }, 'Return to sign in'));
     return;
   }
   const { user } = result;

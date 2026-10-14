@@ -82,6 +82,42 @@ test('a forwarded prefix other than /careops is ignored, so a client cannot choo
   }
 });
 
+test('under /careops/ a site-wide session cookie from the old root deployment is moved onto /careops', async () => {
+  const signIn = await demoSignIn(t.base); // the old deployment: Path=/
+  const sid = /careops_sid=[^;]+/.exec(signIn.headers.get('set-cookie'))[0];
+  const me = await fetch(`${proxyBase}${PREFIX}/api/auth/me`, { headers: { cookie: sid } });
+  assert.equal(me.status, 200);
+  const set = me.headers.getSetCookie();
+  assert.ok(set.some(c => /^careops_sid=;/.test(c) && /Path=\/(;|$)/.test(c) && /Expires=Thu, 01 Jan 1970/.test(c)), `clears Path=/: ${set}`);
+  assert.ok(set.some(c => c.startsWith(`${sid};`) && /Path=\/careops/.test(c)), `re-sets on /careops: ${set}`);
+  // At the subdomain the cookie is left alone.
+  assert.deepEqual((await fetch(`${t.base}/api/auth/me`, { headers: { cookie: sid } })).headers.getSetCookie(), []);
+});
+
+test('in a browser, the old site-wide cookie ends up only on /careops after one page load', async () => {
+  const ctx = await browser.newContext();
+  const signIn = await demoSignIn(t.base);
+  const value = /careops_sid=([^;]+)/.exec(signIn.headers.get('set-cookie'))[1];
+  await ctx.addCookies([{ name: 'careops_sid', value, domain: '127.0.0.1', path: '/', httpOnly: true, sameSite: 'Strict' }]);
+  const page = await ctx.newPage();
+  await page.goto(`${proxyBase}${PREFIX}/app.html`);
+  await page.locator('#user-name').filter({ hasText: /\S/ }).waitFor();
+  const sids = (await ctx.cookies()).filter(c => c.name === 'careops_sid');
+  assert.deepEqual(sids.map(c => c.path), [PREFIX]);
+  await ctx.close();
+});
+
+test('under /careops/ "Return to sign in" after a server error stays inside /careops/', async () => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.route('**/careops/api/auth/me', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":{"code":"internal","message":"Something went wrong."}}' }));
+  await page.goto(`${proxyBase}${PREFIX}/app.html`);
+  const link = page.getByRole('link', { name: 'Return to sign in' });
+  await link.waitFor();
+  assert.equal(new URL(await link.evaluate(a => a.href)).pathname, `${PREFIX}/`);
+  await ctx.close();
+});
+
 test('sign-out clears the cookie on the same path it was set on', async () => {
   const signIn = await demoSignIn(`${proxyBase}${PREFIX}`);
   const { csrfToken } = await signIn.json();

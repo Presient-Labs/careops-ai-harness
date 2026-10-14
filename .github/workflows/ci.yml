@@ -19,6 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install --with-deps chromium # tests/pathPrefix.test.js drives a real browser
       - name: Syntax-check the front end
         run: for f in web/js/app.js web/js/api.js web/js/views/*.js; do node --check "$f"; done
       - run: npm test

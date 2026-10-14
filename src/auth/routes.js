@@ -25,8 +25,13 @@ export function authRoutes({ directory, pool, clock, config }) {
   });
   const full = requireUser({ directory, pool, clock });
   const any = requireUser({ directory, pool, clock, stage: 'any' });
-  r.get('/me', full, (req, res) => res.json({ user: publicUser(req.user), csrfToken: req.session.csrf,
-    session: { idleTimeoutMs: IDLE_MS, expiresAt: new Date(req.session.expiresAt).toISOString(), accountSession: Boolean(req.session.accountId) } }));
+  r.get('/me', full, (req, res) => {
+    // Served under /careops, a session cookie left on Path=/ by the old root deployment would also reach the other apps
+    // on the domain. Every app page asks /me first, so move it here: clear Path=/ and set the same id on /careops.
+    if (cookiePath(req) !== '/') res.clearCookie('careops_sid', { path: '/' }).cookie('careops_sid', req.cookies.careops_sid, cookieOptions(config, req));
+    res.json({ user: publicUser(req.user), csrfToken: req.session.csrf,
+    session: { idleTimeoutMs: IDLE_MS, expiresAt: new Date(req.session.expiresAt).toISOString(), accountSession: Boolean(req.session.accountId) } });
+  });
   r.post('/ping', full, (req, res) => res.status(204).end()); // "Stay signed in": any authenticated request counts as activity
   r.post('/logout', any, (req, res) => { destroySession(directory, req.session.sessionId); res.clearCookie('careops_sid', { path: cookiePath(req) }).status(204).end(); });
   return r;
