@@ -58,11 +58,11 @@
       <div class="table-scroll"><table>
         <thead><tr><th>Safeguard (45 CFR 164.312)</th><th>In this demo</th></tr></thead>
         <tbody>
-          <tr><td>Unique user identification</td><td>Every visitor has their own login.</td></tr>
+          <tr><td>Unique user identification</td><td>Each private demo login belongs to one visitor. Quick look skips sign-in and shares one workplace.</td></tr>
           <tr><td>Automatic logoff</td><td>Signed out after 15 idle minutes, with a warning first.</td></tr>
-          <tr><td>Person or entity authentication</td><td>A required second step: authenticator app, emailed code or passkey.</td></tr>
+          <tr><td>Person or entity authentication</td><td>The private demo login requires a second step: authenticator app, emailed code or passkey. Quick look has no second step.</td></tr>
           <tr><td>Audit controls</td><td>Sign-ins, failures, lockouts and logoffs are recorded.</td></tr>
-          <tr><td>Access control</td><td>Role permissions, and a private workplace per login.</td></tr>
+          <tr><td>Access control</td><td>Role permissions apply to every path. Each private demo login gets its own workplace. Quick look shares a synthetic workplace and shows role behaviour only.</td></tr>
         </tbody>
       </table></div>
       <p class="small muted">These are HIPAA-style safeguards shown on synthetic data. In this demo the emailed code lands in a Demo mailbox that the signing-in browser can read, so it shows the flow rather than proving access to a real inbox; with a real email service it is a true second step. A real deployment also needs a signed BAA with every vendor that touches PHI, a risk analysis, policies and training. Software alone is never "HIPAA compliant".</p>
